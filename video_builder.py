@@ -2,21 +2,68 @@
 Module 5: VIDEO BUILDER
 Combines the voice-over audio + stock video clips + burned-in captions
 into a single final video using MoviePy (built on FFmpeg).
+
+Captions are rendered with Pillow (not MoviePy's TextClip/ImageMagick),
+since ImageMagick's default security policy on Ubuntu CI runners blocks
+the text-rendering operations TextClip relies on.
 """
 
+import os
 import yaml
+import numpy as np
+from PIL import Image, ImageDraw, ImageFont
 from moviepy.editor import (
     VideoFileClip,
     AudioFileClip,
     concatenate_videoclips,
     CompositeVideoClip,
-    TextClip,
+    ImageClip,
 )
 
 
 def load_config():
     with open("config/settings.yaml", "r") as f:
         return yaml.safe_load(f)
+
+
+def _make_caption_image(text: str, width: int, height: int) -> np.ndarray:
+    """Render caption text onto a transparent RGBA image using Pillow."""
+    img = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    try:
+        font = ImageFont.truetype(
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 40
+        )
+    except OSError:
+        font = ImageFont.load_default()
+
+    max_width = int(width * 0.85)
+    words = text.split()
+    lines, current = [], ""
+    for word in words:
+        test_line = f"{current} {word}".strip()
+        bbox = draw.textbbox((0, 0), test_line, font=font)
+        if bbox[2] - bbox[0] > max_width:
+            lines.append(current)
+            current = word
+        else:
+            current = test_line
+    if current:
+        lines.append(current)
+
+    line_height = 55
+    total_height = len(lines) * line_height
+    y = height - total_height - 60
+
+    for line in lines:
+        bbox = draw.textbbox((0, 0), line, font=font)
+        x = (width - (bbox[2] - bbox[0])) / 2
+        for dx, dy in [(-2, 0), (2, 0), (0, -2), (0, 2)]:
+            draw.text((x + dx, y + dy), line, font=font, fill="black")
+        draw.text((x, y), line, font=font, fill="white")
+        y += line_height
+
+    return np.array(img)
 
 
 def build_video(audio_path: str, clip_paths: list, script_text: str,
@@ -27,13 +74,11 @@ def build_video(audio_path: str, clip_paths: list, script_text: str,
     narration = AudioFileClip(audio_path)
     total_duration = min(narration.duration, config["max_video_length_seconds"])
 
-    # Loop/trim clips to fill the narration duration
     per_clip_duration = total_duration / len(clip_paths)
     processed_clips = []
     for path in clip_paths:
         clip = VideoFileClip(path)
         clip = clip.resize(height=height)
-        # center-crop to target width
         if clip.w > width:
             x_center = clip.w / 2
             clip = clip.crop(x_center=x_center, width=width)
@@ -43,25 +88,11 @@ def build_video(audio_path: str, clip_paths: list, script_text: str,
     video = concatenate_videoclips(processed_clips, method="compose")
     video = video.set_audio(narration).set_duration(total_duration)
 
-    # Simple burned-in caption (full script, bottom third, semi-transparent)
-    caption = (
-        TextClip(
-            script_text,
-            fontsize=36,
-            color="white",
-            font="Arial-Bold",
-            method="caption",
-            size=(width * 0.85, None),
-            align="center",
-        )
-        .set_position(("center", "bottom"))
-        .set_duration(total_duration)
-        .margin(bottom=60, opacity=0)
-    )
+    caption_array = _make_caption_image(script_text, width, height)
+    caption = ImageClip(caption_array).set_duration(total_duration)
 
     final = CompositeVideoClip([video, caption])
 
-    import os
     os.makedirs("output", exist_ok=True)
     final.write_videofile(
         output_path,
