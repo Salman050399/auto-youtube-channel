@@ -1,0 +1,23 @@
+# ============================================
+# CONFIGURATION - non-secret settings only.
+# API keys/secrets are NOT stored here — they come from
+# environment variables (GitHub Actions Secrets). See README.
+# ============================================
+
+news_query: "AI OR artificial intelligence OR technology"
+news_language: "en"
+
+groq_model: "llama-3.1-8b-instant"   # free, fast model on Groq
+
+piper_voice_model: "en_US-lessac-medium"
+
+youtube_client_secrets_file: "config/client_secrets.json"
+youtube_category_id: "28"   # 28 = Science & Technology
+youtube_privacy_status: "public"
+
+video_resolution: [1920, 1080]
+video_fps: 30
+max_video_length_seconds: 180
+num_stock_clips: 5
+
+videos_per_day: 1

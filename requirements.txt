@@ -1,0 +1,6 @@
+requests
+pyyaml
+moviepy==1.0.3
+Pillow
+google-auth-oauthlib
+google-api-python-client

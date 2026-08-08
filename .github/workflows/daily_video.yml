@@ -1,0 +1,72 @@
+name: Daily AI News Video
+
+on:
+  schedule:
+    # Runs every day at 9:00 AM IST (3:30 AM UTC)
+    - cron: "30 3 * * *"
+  workflow_dispatch:   # allows manual trigger from the GitHub Actions tab
+
+permissions:
+  contents: write   # needed to commit topics/used.json back to the repo
+
+jobs:
+  create-and-upload-video:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install system dependencies (ffmpeg, imagemagick)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg imagemagick
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Download Piper TTS binary and voice model
+        run: |
+          mkdir -p voices
+          curl -L -o piper.tar.gz https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_amd64.tar.gz
+          tar -xzf piper.tar.gz
+          sudo cp piper/piper /usr/local/bin/piper
+          sudo cp -r piper/espeak-ng-data /usr/local/bin/ 2>/dev/null || true
+          curl -L -o voices/en_US-lessac-medium.onnx \
+            https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/medium/en_US-lessac-medium.onnx
+          curl -L -o voices/en_US-lessac-medium.onnx.json \
+            https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/medium/en_US-lessac-medium.onnx.json
+
+      - name: Run video pipeline and upload to YouTube
+        env:
+          NEWS_API_KEY: ${{ secrets.NEWS_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          YOUTUBE_CLIENT_SECRETS_JSON: ${{ secrets.YOUTUBE_CLIENT_SECRETS_JSON }}
+          YOUTUBE_TOKEN_JSON: ${{ secrets.YOUTUBE_TOKEN_JSON }}
+        run: python main.py
+
+      - name: Save used-topics history back to repo
+        if: always()
+        run: |
+          git config user.name "auto-video-bot"
+          git config user.email "actions@github.com"
+          git add topics/used.json
+          git diff --staged --quiet || git commit -m "Update used topics [skip ci]"
+          git push || echo "Nothing to push"
+
+      - name: Upload logs as artifact (for debugging failures)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline-output
+          path: |
+            output/
+            thumbnails/
+          retention-days: 3

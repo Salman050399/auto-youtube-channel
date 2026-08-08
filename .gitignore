@@ -1,0 +1,19 @@
+# Never commit secrets
+config/client_secrets.json
+config/token.json
+*.key
+
+# Generated media (regenerated fresh each run)
+audio/*.wav
+visuals/*.mp4
+output/*.mp4
+thumbnails/*.jpg
+voices/*.onnx
+voices/*.onnx.json
+piper/
+piper.tar.gz
+
+# Python
+__pycache__/
+*.pyc
+.env
