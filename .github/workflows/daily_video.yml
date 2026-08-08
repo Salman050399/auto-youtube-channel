@@ -34,10 +34,8 @@ jobs:
       - name: Download Piper TTS binary and voice model
         run: |
           mkdir -p voices
-          curl -L -o piper.tar.gz https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_amd64.tar.gz
-          tar -xzf piper.tar.gz
-          sudo cp piper/piper /usr/local/bin/piper
-          sudo cp -r piper/espeak-ng-data /usr/local/bin/ 2>/dev/null || true
+           curl -L -o piper.tar.gz https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_linux_x86_64.tar.gz
+          echo "$GITHUB_WORKSPACE/piper" >> $GITHUB_PATH
           curl -L -o voices/en_US-lessac-medium.onnx \
             https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/medium/en_US-lessac-medium.onnx
           curl -L -o voices/en_US-lessac-medium.onnx.json \
