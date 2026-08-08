@@ -32,9 +32,11 @@ def generate_voice(script_text: str, output_path: str = "audio/narration.wav") -
 
     os.makedirs("audio", exist_ok=True)
 
+    piper_bin = os.environ.get("PIPER_BINARY", "piper")
+
     # Piper reads text from stdin and writes wav to --output_file
     process = subprocess.run(
-        ["piper", "--model", model_path, "--output_file", output_path],
+        [piper_bin, "--model", model_path, "--output_file", output_path],
         input=script_text,
         text=True,
         capture_output=True,
