@@ -31,25 +31,15 @@ jobs:
       - name: Install Python dependencies
         run: pip install -r requirements.txt
 
-      - name: Set up Piper TTS, run pipeline, upload to YouTube
+      - name: Run pipeline and upload to YouTube
         env:
           NEWS_API_KEY: ${{ secrets.NEWS_API_KEY }}
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           YOUTUBE_CLIENT_SECRETS_JSON: ${{ secrets.YOUTUBE_CLIENT_SECRETS_JSON }}
           YOUTUBE_TOKEN_JSON: ${{ secrets.YOUTUBE_TOKEN_JSON }}
-          PIPER_BINARY: ${{ github.workspace }}/piper/piper
-        run: |
-          mkdir -p voices
-          curl -fL -o piper.tar.gz https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_linux_x86_64.tar.gz
-          tar -xzf piper.tar.gz
-          ls -la piper/
-          test -x piper/piper && echo "Piper binary OK" || (echo "Piper binary MISSING" && exit 1)
-          curl -fL -o voices/en_US-lessac-medium.onnx \
-            https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/medium/en_US-lessac-medium.onnx
-          curl -fL -o voices/en_US-lessac-medium.onnx.json \
-            https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/medium/en_US-lessac-medium.onnx.json
-          python main.py
+          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+        run: python main.py
 
       - name: Save used-topics history back to repo
         if: always()
