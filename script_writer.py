@@ -21,12 +21,20 @@ def load_config():
 def generate_script(topic: dict) -> dict:
     config = load_config()
 
-    prompt = f"""You are writing a short YouTube video script (under 60 seconds spoken,
-about 130-150 words) about this tech/AI news story.
+    prompt = f"""You are a viral short-form video scriptwriter (like top YouTube
+Shorts/Reels creators). Write an energetic, hook-driven script (under 60 seconds
+spoken, about 130-150 words) about this tech/AI news story.
 
 Headline: {topic['title']}
 Summary: {topic['description']}
 Source: {topic['source']}
+
+Rules for the script:
+- Start with a strong hook in the first sentence (a bold claim, question, or
+  surprising fact) - never start with "In this video" or "Today we're talking about"
+- Write in a punchy, conversational tone - short sentences, high energy
+- Speak directly to the viewer ("you") where natural
+- End with a thought-provoking line or call-to-action, not a flat summary
 
 Return ONLY valid JSON, no markdown, no extra text, in this exact format:
 {{
