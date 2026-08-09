@@ -83,6 +83,16 @@ def build_video(audio_path: str, clip_paths: list, script_text: str,
             x_center = clip.w / 2
             clip = clip.crop(x_center=x_center, width=width)
         clip = clip.subclip(0, min(per_clip_duration, clip.duration))
+
+        # Ken Burns style slow zoom-in: resize larger over time, then
+        # composite onto a fixed-size canvas so the output frame size
+        # stays constant while the visible content appears to zoom in.
+        clip_duration = clip.duration
+        base_w, base_h = clip.size
+        zoomed = clip.resize(lambda t: 1 + 0.06 * (t / clip_duration))
+        zoomed = zoomed.set_position(("center", "center"))
+        clip = CompositeVideoClip([zoomed], size=(base_w, base_h)).set_duration(clip_duration)
+
         processed_clips.append(clip)
 
     video = concatenate_videoclips(processed_clips, method="compose")
