@@ -1,49 +1,51 @@
 """
 Module 3: VOICE GENERATOR
-Converts the script text into a natural voice-over audio file
-using Piper TTS (free, offline, open-source).
+Converts the script text into a natural voice-over audio file using
+ElevenLabs (free tier - no card required, just email signup).
+Much more natural sounding than offline TTS engines like Piper.
 
-Setup (one-time):
-    1. Download piper binary: https://github.com/rhasspy/piper/releases
-    2. Download a voice model, e.g. en_US-lessac-medium (.onnx + .onnx.json)
-    3. Place both in a `voices/` folder
+Get a free API key: https://elevenlabs.io (Sign up -> Profile -> API Keys)
+Free tier: ~10,000 characters/month, plenty for one short video/day.
 """
 
-import subprocess
 import os
-import yaml
+import requests
+from secrets_loader import get_secret
+
+# "Adam" - a clear, natural-sounding default voice available on the free tier.
+# Browse more voices at https://elevenlabs.io/app/voice-library and swap the ID.
+DEFAULT_VOICE_ID = "pNInz6obpgDQGcFmaJgB"
 
 
-def load_config():
-    with open("config/settings.yaml", "r") as f:
-        return yaml.safe_load(f)
-
-
-def generate_voice(script_text: str, output_path: str = "audio/narration.wav") -> str:
-    config = load_config()
-    voice_model = config["piper_voice_model"]
-    model_path = f"voices/{voice_model}.onnx"
-
-    if not os.path.exists(model_path):
-        raise FileNotFoundError(
-            f"Voice model not found at {model_path}. "
-            f"Download it from https://github.com/rhasspy/piper/releases"
-        )
-
+def generate_voice(script_text: str, output_path: str = "audio/narration.mp3") -> str:
     os.makedirs("audio", exist_ok=True)
 
-    piper_bin = os.environ.get("PIPER_BINARY", "piper")
-
-    # Piper reads text from stdin and writes wav to --output_file
-    process = subprocess.run(
-        [piper_bin, "--model", model_path, "--output_file", output_path],
-        input=script_text,
-        text=True,
-        capture_output=True,
+    response = requests.post(
+        f"https://api.elevenlabs.io/v1/text-to-speech/{DEFAULT_VOICE_ID}",
+        headers={
+            "xi-api-key": get_secret("ELEVENLABS_API_KEY"),
+            "Content-Type": "application/json",
+        },
+        json={
+            "text": script_text,
+            "model_id": "eleven_multilingual_v2",
+            "voice_settings": {
+                "stability": 0.45,
+                "similarity_boost": 0.8,
+                "style": 0.35,
+                "use_speaker_boost": True,
+            },
+        },
+        timeout=60,
     )
 
-    if process.returncode != 0:
-        raise Exception(f"Piper TTS failed: {process.stderr}")
+    if response.status_code != 200:
+        raise Exception(
+            f"ElevenLabs TTS failed ({response.status_code}): {response.text}"
+        )
+
+    with open(output_path, "wb") as f:
+        f.write(response.content)
 
     return output_path
 
