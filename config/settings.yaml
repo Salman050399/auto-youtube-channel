@@ -7,7 +7,7 @@
 news_query: "AI OR artificial intelligence OR technology"
 news_language: "en"
 
-groq_model: "llama-3.1-8b-instant"   # free, fast model on Groq
+groq_model: "llama-3.3-70b-versatile"   # bigger, higher-quality free model on Groq
 
 piper_voice_model: "en_US-lessac-medium"
 
